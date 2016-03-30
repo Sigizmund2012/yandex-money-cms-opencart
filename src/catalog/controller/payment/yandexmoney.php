@@ -18,7 +18,7 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->data['account'] = $this->config->get('yandexmoney_account');
 		$this->data['shop_id'] = $this->config->get('yandexmoney_shopid');
 		$this->data['scid'] = $this->config->get('yandexmoney_scid');
-		$this->data['customerNumber'] =$order_info['order_id'].' ' . $order_info['email'];
+		$this->data['customerNumber'] = trim($order_info['order_id'].' '.$order_info['email']);
 		
 		$this->data['shopSuccessURL'] = (!$this->config->get('yandexmoney_page_success'))? $this->url->link('checkout/success', '', 'SSL'):$this->url->link('information/information', 'information_id='.$this->config->get('yandexmoney_page_success'));
 		$this->data['shopFailURL'] =(!$this->config->get('yandexmoney_page_fail'))? $this->url->link('checkout/failure', '', 'SSL'):$this->url->link('information/information', 'information_id='.$this->config->get('yandexmoney_page_fail'));
