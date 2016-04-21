@@ -1,7 +1,7 @@
 <?php 
 class ControllerPaymentYandexMoney extends Controller {
 	private $error = array();
-	private $ya_version= '1.7.0.2';
+	private $ya_version= '1.7.0.3';
 	private function sendStatistics(){
 		$this->language->load('payment/yandexmoney');
 		$this->load->model('setting/setting');
