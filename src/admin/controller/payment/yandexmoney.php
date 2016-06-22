@@ -1,7 +1,7 @@
 <?php 
 class ControllerPaymentYandexMoney extends Controller {
 	private $error = array();
-	private $ya_version= '1.7.0.3';
+	private $ya_version= '1.7.0.4';
 	private function sendStatistics(){
 		$this->language->load('payment/yandexmoney');
 		$this->load->model('setting/setting');
@@ -79,10 +79,10 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->data['shopFailURL'] = $url->link('checkout/failure', '', 'SSL');
 		$this->data['yandexmoney_version'] = $this->ya_version;
 		
-		$list_language=array('yandexmoney_license','heading_title','text_payment','text_yes','text_no','text_disabled','text_enabled','text_all_zones','text_welcome1','text_welcome2','text_params','text_param_name','text_param_value','text_aviso1','text_aviso2','title_default','entry_version','entry_license','entry_testmode','entry_modes','entry_mode1','entry_mode2','entry_mode3','entry_paymode','entry_methods','entry_method_ym','entry_method_cards','entry_method_cash','entry_method_mobile','entry_method_wm','entry_method_ab','entry_method_sb','entry_method_ma','entry_method_pb','entry_method_qw','entry_method_qp','entry_method_mp','entry_default_method','entry_page_mpos','entry_page_success','entry_page_fail','entry_shopid','entry_scid','entry_title','entry_total','entry_total2','entry_password','entry_account','entry_order_status','entry_notify','entry_geo_zone','entry_status','entry_sort_order','button_save','button_cancel');
+		$list_language=array('yandexmoney_license','heading_title','text_payment','text_yes','text_no','text_disabled','text_enabled','text_all_zones','text_welcome1','text_welcome2','text_params','text_param_name','text_param_value','text_aviso1','text_aviso2','title_default','entry_version','entry_license','entry_testmode','entry_modes','entry_mode1','entry_mode2','entry_mode3','entry_methods','entry_method_ym','entry_method_cards','entry_method_cash','entry_method_mobile','entry_method_wm','entry_method_ab','entry_method_sb','entry_method_ma','entry_method_pb','entry_method_qw','entry_method_qp','entry_method_mp','entry_default_method','entry_page_mpos','entry_page_success','entry_page_fail','entry_shopid','entry_scid','entry_title','entry_total','entry_total2','entry_password','entry_account','entry_order_status','entry_notify','entry_geo_zone','entry_status','entry_sort_order','button_save','button_cancel');
 		foreach ($list_language as $item) $this->data[$item] = $this->language->get($item);
 
-		$list_errors=array('warning','account','methods','account','password','shopid','scid','title');
+		$list_errors=array('warning','account','methods','account','password','shopid','scid','title','default');
 		foreach ($list_errors as $e_item) $this->data['error_'.$e_item] = (isset($this->error[$e_item]))?$this->error[$e_item]:'';
 				
 		$this->data['breadcrumbs'] = array();
@@ -157,6 +157,12 @@ class ControllerPaymentYandexMoney extends Controller {
 		$bool_methods=false;
 		foreach ($list_methods as $m_item) if(isset($this->request->post['yandexmoney_method_'.$m_item])) $bool_methods = true;
 		if (!$bool_methods && $this->request->post['yandexmoney_mode']==2) $this->error['methods'] = $this->language->get('error_methods');
+
+		foreach (array('PC'=>'ym', 'AC'=>'cards', 'GP'=>'cash', 'MC'=>'mobile', 'WM'=>'wm', 'SB'=>'sb', 'AB'=>'ab', 'PB'=>'pb', 'MA'=>'ma', 'QW'=>'qw', 'QP'=>'qp', 'MP'=>'mp') as $name => $value){
+			if ($this->request->post['yandexmoney_default_method'] == $name && $this->config->get('yandexmoney_method_'.$value)!='1' )
+				$this->error['default'] = $this->language->get('error_default');
+		}
+
 		if (!$this->error) return true; else return false;
 	}
 }

@@ -1,5 +1,5 @@
 <?php if (isset($header)) echo $header;?>
-<form method="POST" id='YamoneyForm' action="<?php echo $action; ?>">
+<form accept-charset="UTF-8" enctype="application/x-www-form-urlencoded" method="POST" id='YamoneyForm' action="<?php echo $action; ?>">
    <?php if (!$epl){ ?>
 	<h3><?php echo $method_label; ?></h3>
    <table class="radio">
@@ -12,7 +12,8 @@
 				<td><input type="radio" name="paymentType" value="<?php echo $m_val.'" '.$checked; ?> id="ym_<?php echo $m_val; ?>"></td>
 				<td><label for="ym_<?php echo $m_val; ?>"><?php echo $m_name; ?></label></td>
 			</tr>
-		<?php }} ?>
+		<?php }
+		} ?>
 		</tbody>
    </table>
 	<?php } else { ?>

@@ -59,21 +59,16 @@
                 <?php } ?>
               </td>
           </tr>
-		  
 		  <tr>
-            <td><span class="required">*</span> <?php echo $entry_modes; ?></td>
+            <td><span class="required">*</span> <?php echo $entry_modes; ?> <img title="Нужно выбрать" src="view/image/payment/q.png""</td>
             <td>
-				<select name="yandexmoney_mode" id="yandexmoney_mode" onchange="yandex_validate_mode();">
-					<option value="1"<?php if ($yandexmoney_mode == 1 or !$yandexmoney_mode){ ?> selected<?php } ?>><?php echo $entry_mode1; ?></option>
+				<select name="yandexmoney_mode" id="yandexmoney_mode" onchange="yandex_validate_mode();" title="Test 123">
+					<option value="1"<?php if ($yandexmoney_mode == 1){ ?> selected<?php } ?>><?php echo $entry_mode1; ?></option>
 					<option value="2"<?php if ($yandexmoney_mode == 2){ ?> selected<?php } ?>><?php echo $entry_mode2; ?></option>
-					<option value="3"<?php if ($yandexmoney_mode == 3){ ?> selected<?php } ?>><?php echo $entry_mode3; ?></option>
+					<option value="3"<?php if ($yandexmoney_mode == 3 or !$yandexmoney_mode){ ?> selected<?php } ?>><?php echo $entry_mode3; ?></option>
 				</select>
 			</td>
           </tr>
-			<tr class="without-select">
-				<td></td>
-				<td><?php echo $entry_paymode; ?></td>
-			</tr>
 		   <tr class="with-select">
             <td><span class="required">*</span> <?php echo $entry_methods; ?></td>
             <td>
@@ -103,7 +98,11 @@
 				 <option value=<?php echo '"'.$name.'"'; 
 					echo ($name == $yandexmoney_default_method)?' selected="selected" ':'';?>><?php echo $value; ?></option>
 				 <?php } ?>
-			  </select></td>
+			  </select>
+				<?php if ($error_default) { ?>
+					<span class="error"><?php echo $error_default; ?></span>
+				<?php } ?>
+			</td>
 		 </tr>
 		 
 		 <tr class="individ">
