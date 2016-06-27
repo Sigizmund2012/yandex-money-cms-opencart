@@ -132,6 +132,8 @@ class ControllerPaymentYandexMoney extends Controller {
 	}
 
 	protected function validate() {
+		$this->language->load('payment/yandexmoney');
+
 		if (!$this->user->hasPermission('modify', 'payment/yandexmoney')) {
 			$this->error['warning'] = $this->language->get('error_permission');
 		}
@@ -153,14 +155,17 @@ class ControllerPaymentYandexMoney extends Controller {
 			$this->error['title'] = $this->language->get('error_title');
 		}
 		
-		$list_methods=array('ym','cards','cash','mobile','wm','sb','ab','pb','ma','qp','qw','mp');
-		$bool_methods=false;
-		foreach ($list_methods as $m_item) if(isset($this->request->post['yandexmoney_method_'.$m_item])) $bool_methods = true;
-		if (!$bool_methods && $this->request->post['yandexmoney_mode']==2) $this->error['methods'] = $this->language->get('error_methods');
+		$list_methods=($this->request->post['yandexmoney_mode']>=2)?array('ym','cards','cash','mobile','wm','sb','ab','pb','ma','qp','qw','mp'):array('ym','cards');
+		$active_method = '';
+		foreach ($list_methods as $m_item) if(isset($this->request->post['yandexmoney_method_'.$m_item]) && $this->request->post['yandexmoney_method_'.$m_item] == '1') $active_method = $m_item;
+		if ($active_method =='' && $this->request->post['yandexmoney_mode']<=2) $this->error['methods'] = $this->language->get('error_methods');
 
-		foreach (array('PC'=>'ym', 'AC'=>'cards', 'GP'=>'cash', 'MC'=>'mobile', 'WM'=>'wm', 'SB'=>'sb', 'AB'=>'ab', 'PB'=>'pb', 'MA'=>'ma', 'QW'=>'qw', 'QP'=>'qp', 'MP'=>'mp') as $name => $value){
-			if ($this->request->post['yandexmoney_default_method'] == $name && $this->config->get('yandexmoney_method_'.$value)!='1' )
-				$this->error['default'] = $this->language->get('error_default');
+		if ($this->request->post['yandexmoney_mode']<3){
+			$methods = array('PC'=>'ym', 'AC'=>'cards', 'GP'=>'cash', 'MC'=>'mobile', 'WM'=>'wm', 'SB'=>'sb', 'AB'=>'ab', 'PB'=>'pb', 'MA'=>'ma', 'QW'=>'qw', 'QP'=>'qp', 'MP'=>'mp');
+			$def_method = $this->request->post['yandexmoney_default_method'];
+			if ($this->config->get('yandexmoney_method_'.$methods[$def_method])!='1'){
+				$this->request->post['yandexmoney_default_method'] = array_flip($methods)[$active_method];
+			}
 		}
 
 		if (!$this->error) return true; else return false;
