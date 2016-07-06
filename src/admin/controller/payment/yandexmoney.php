@@ -164,7 +164,8 @@ class ControllerPaymentYandexMoney extends Controller {
 			$methods = array('PC'=>'ym', 'AC'=>'cards', 'GP'=>'cash', 'MC'=>'mobile', 'WM'=>'wm', 'SB'=>'sb', 'AB'=>'ab', 'PB'=>'pb', 'MA'=>'ma', 'QW'=>'qw', 'QP'=>'qp', 'MP'=>'mp');
 			$def_method = $this->request->post['yandexmoney_default_method'];
 			if ($this->config->get('yandexmoney_method_'.$methods[$def_method])!='1'){
-				$this->request->post['yandexmoney_default_method'] = array_flip($methods)[$active_method];
+				$reverse_methods = array_flip($methods);
+				$this->request->post['yandexmoney_default_method'] = $reverse_methods[$active_method];
 			}
 		}
 
