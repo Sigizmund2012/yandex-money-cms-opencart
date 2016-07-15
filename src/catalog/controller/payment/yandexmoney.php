@@ -49,7 +49,7 @@ class ControllerPaymentYandexMoney extends Controller {
 				'common/header'	
 			);
 		}
-		
+		$this->response->addHeader('Content-Type: text/html; charset=utf-8');
 		$this->response->setOutput($this->render());
 
 	}
@@ -86,7 +86,10 @@ class ControllerPaymentYandexMoney extends Controller {
 	public function callback() {
     	$ymObj = new YandexMoneyObj();
 		$callbackParams = $_POST;
-		
+		if ($_SERVER['REQUEST_METHOD']=="GET"){
+			echo "You aren't Yandex.Money. We use module for Opencart 1.5.x";
+			return;
+		}
 		$ymObj->org_mode = ($this->config->get('yandexmoney_mode') >= 2);
 		$ymObj->password = $this->config->get('yandexmoney_password');
 		$ymObj->shopid = $this->config->get('yandexmoney_shopid');
