@@ -54,7 +54,9 @@
 		</div>
 	</form>
 	<script type="text/javascript"><!--
-		$('#button-confirm').bind('click', function() {
+		$('#button-confirm').bind('click', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
 			$.ajax({
 				type: 'get',
 				url: 'index.php?route=payment/yandexmoney/confirm'
