@@ -20,7 +20,7 @@ class ModelPaymentYandexMoney extends Model {
 		if ($status) {
 			$method_data = array(
 				'code'       => 'yandexmoney',
-				'title'      => ((int)$this->config->get('ya_kassamode') == '1' && !empty($this->config->get('ya_namePaySys')))?$this->config->get('ya_namePaySys'):$this->language->get('text_title'),
+				'title'      => ($this->config->get('ya_kassamode') == '1' && $this->config->get('ya_namePaySys'))?$this->config->get('ya_namePaySys'):$this->language->get('text_title'),
 				'sort_order' => (int) $this->config->get('ya_sortOrder')
 			);
 		}
