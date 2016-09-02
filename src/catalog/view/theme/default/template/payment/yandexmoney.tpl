@@ -9,8 +9,13 @@
 						$checked = ($default_method == $m_val)?'checked':'';
 						?>
 						<tr class="highlight">
-							<td><input type="radio" name="paymentType" value="<?php echo $m_val.'" '.$checked; ?> id="ym_<?php echo $m_val; ?>"></td>
-							<td><label for="ym_<?php echo $m_val; ?>"><?php echo $m_name; ?></label></td>
+							<td>
+								<label for="ym_<?php echo $m_val; ?>">
+									<input type="radio" name="paymentType" value="<?php echo $m_val.'" '.$checked; ?> id="ym_<?php echo $m_val; ?>">
+									<img src="<?php echo $imageurl.'yandexmoney/'.strtolower ($m_val).'.png'; ?>"/>
+									<?php echo $m_name; ?>
+								</label>
+							</td>
 						</tr>
 					<?php }
 				} ?>

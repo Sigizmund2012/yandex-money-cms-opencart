@@ -38,7 +38,13 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->data['method_label'] =  $this->language->get('text_method');
 		$this->data['order_text'] =  $this->language->get('text_order');
 
-		if (file_exists(DIR_TEMPLATE . $this->config->get('config_template') . '/template/payment/yandexmoney.tpl')) {
+        if (isset($this->request->server['HTTPS']) && (($this->request->server['HTTPS'] == 'on') || ($this->request->server['HTTPS'] == '1'))) {
+            $this->data['imageurl'] = $this->config->get('config_ssl') . 'image/';
+        } else {
+            $this->data['imageurl'] = $this->config->get('config_url') . 'image/';
+        }
+
+        if (file_exists(DIR_TEMPLATE . $this->config->get('config_template') . '/template/payment/yandexmoney.tpl')) {
 			$this->template = $this->config->get('config_template') . '/template/payment/yandexmoney.tpl';
 		} else {
 			$this->template = 'default/template/payment/yandexmoney.tpl';
@@ -104,16 +110,16 @@ class ControllerPaymentYandexMoney extends Controller {
 			$order_info = $this->model_checkout_order->getOrder($order_id);
 			if ($order_info!=false){
 				$comment=($ymObj->org_mode && $callbackParams['paymentType']=="MP" && isset($callbackParams['orderDetails']))?$callbackParams['orderDetails']:'';
-				$amount = number_format($callbackParams[($ymObj->org_mode)?'orderSumAmount':'amount'], 2, '.', '');
+				$amount = number_format($callbackParams[($ymObj->org_mode)?'orderSumAmount':'withdraw_amount'], 2, '.', '');
 				if ($callbackParams['paymentType']=="MP" || $amount == number_format($order_info['total'], 2, '.', '')){
 					if (isset($callbackParams['action']) && $callbackParams['action'] == 'paymentAviso'){
 						$res = $this->model_checkout_order->update($order_id, $this->config->get('ya_newStatus'), "Номер транзакции: ".$callbackParams['invoiceId'].". Сумма: ".$callbackParams['orderSumAmount'].' '.$comment, $notify);
-					}elseif (isset($callbackParams["label"]) && !$ymObj->org_mode){
-						$sender=($callbackParams['sender']!='')?"Номер кошелька Яндекс.Денег: ".$callbackParams['sender'].".":'';
-						$res = $this->model_checkout_order->update($order_id, $this->config->get('ya_newStatus'), $sender." Сумма: ".$callbackParams['amount'].' '.$comment, $notify);
-					}else{
-						$res = $this->model_checkout_order->confirm($order_id, $this->config->get('config_order_status_id'),$comment);
-					}
+					}elseif (isset($callbackParams["action"]) && $ymObj->org_mode){
+                        $res = $this->model_checkout_order->confirm($order_id, $this->config->get('config_order_status_id'),$comment);
+                    }else{
+                        $sender=($callbackParams['sender']!='')?"Номер кошелька Яндекс.Денег: ".$callbackParams['sender'].".":'';
+                        $res = $this->model_checkout_order->confirm($order_id, $this->config->get('ya_newStatus'), $sender." Сумма: ".$callbackParams['withdraw_amount'].' '.$comment, $notify);
+                    }
 					$ymObj->sendCode($callbackParams, "0");
 				}else{
 					$ymObj->sendCode($callbackParams, "100");
