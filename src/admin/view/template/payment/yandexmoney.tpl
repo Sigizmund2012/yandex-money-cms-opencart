@@ -91,21 +91,21 @@
 							<div class="form-group">
 								<label for="ya_shopid" class="col-sm-3 control-label">Shop ID</label>
 								<div class="col-sm-9">
-									<input name='ya_shopid' type="text" class="form-control" id="ya_shopid" value="<?php echo $ya_shopid; ?>">
+									<input name='ya_shopid' type="text" class="form-control" id="ya_shopid" value="<?php echo trim($ya_shopid); ?>">
 									<p class="help-block"><?php echo $lang_shopid; ?></p>
 								</div>
 							</div>
 							<div class="form-group">
 								<label for="inputPassword3" class="col-sm-3 control-label">scid</label>
 								<div class="col-sm-9">
-									<input name='ya_scid' type="text" class="form-control" id="ya_scid" value="<?php echo $ya_scid; ?>">
+									<input name='ya_scid' type="text" class="form-control" id="ya_scid" value="<?php echo trim($ya_scid); ?>">
 									<p class="help-block"><?php echo $lang_scid; ?></p>
 								</div>
 							</div>
 							<div class="form-group">
 								<label for="inputPassword3" class="col-sm-3 control-label">ShopPassword</label>
 								<div class="col-sm-9">
-									<input name='ya_shopPassword' type="text" class="form-control" id="ya_shopPassword"  value="<?php echo $ya_shopPassword; ?>">
+									<input name='ya_shopPassword' type="text" class="form-control" id="ya_shopPassword"  value="<?php echo trim($ya_shopPassword); ?>">
 									<p class="help-block"><?php echo $lang_shopPassword; ?></p>
 								</div>
 								<p class='col-sm-9 col-sm-offset-3'><?php echo $lang_lk_help; ?></p>
