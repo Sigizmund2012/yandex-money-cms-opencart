@@ -28,6 +28,7 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->data['formcomment'] = $this->config->get('config_name');
 		$this->data['short_dest'] = $this->config->get('config_name');
 		$this->data['comment'] = $order_info['comment'];
+		$this->data['cmsname'] = ($child)?'opencart-extracall':'opencart';
 		$this->data['sum'] = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
 		$this->data['allow_methods']=array();
 		$this->data['default_method'] = $this->config->get('ya_paymentDfl');
