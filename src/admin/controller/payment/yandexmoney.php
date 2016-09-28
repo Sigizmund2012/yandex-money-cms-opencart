@@ -1,7 +1,7 @@
 <?php 
 class ControllerPaymentYandexMoney extends Controller {
 	private $error = array();
-	private $ya_version= '1.7.3';
+	private $ya_version= '1.7.3.1';
 	private $lang = array(
 		'setting_head',
 		'license',

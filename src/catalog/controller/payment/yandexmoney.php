@@ -33,8 +33,10 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->data['allow_methods']=array();
 		$this->data['default_method'] = $this->config->get('ya_paymentDfl');
 		foreach (array('PC'=>'ym', 'AC'=>'cards', 'GP'=>'cash', 'MC'=>'mobile', 'WM'=>'wm', 'SB'=>'sb', 'AB'=>'ab', 'PB'=>'pb', 'MA'=>'ma', 'QW'=>'qw', 'QP'=>'qp', 'MP'=>'mp') as $name => $value){
-			if (is_array($this->config->get('ya_paymentOpt')) && in_array($name, $this->config->get('ya_paymentOpt'))) $this->data['allow_methods'][$name] = $this->language->get('text_method_'.$value);
-		}
+			if ((is_array($this->config->get('ya_paymentOpt')) && in_array($name, $this->config->get('ya_paymentOpt')))
+                || (is_array($this->config->get('ya_paymentOpt_wallet')) && in_array($name, $this->config->get('ya_paymentOpt_wallet'))))
+			    $this->data['allow_methods'][$name] = $this->language->get('text_method_'.$value);
+        }
 		$this->data['mpos_page_url'] = $this->url->link('payment/yandexmoney/confirm','', 'SSL');
 		$this->data['method_label'] =  $this->language->get('text_method');
 		$this->data['order_text'] =  $this->language->get('text_order');

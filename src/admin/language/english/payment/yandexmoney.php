@@ -97,14 +97,14 @@ $_['lk_kassa'] = "Параметры из личного кабинета Янд
 $_['shopid'] = "Идентификатор магазина";
 $_['scid'] = "Номер витрины магазина";
 $_['shopPassword'] = "Секретное слово";
-$_['lk_help'] = "Shop ID, scid, ShopPassword можно посмотреть в <a href='https://money.yandex.ru/joinups' target='_blank'>личном кабинете</a> после подключения Яндекс.Кассы.";
+$_['lk_help'] = "Shop ID, scid, ShopPassword можно посмотреть в <a href='https://kassa.yandex.ru/my' target='_blank'>личном кабинете</a> после подключения Яндекс.Кассы.";
 $_['paymode_head'] = "Настройка сценария оплаты";
 $_['paymode_label'] = "Сценарий оплаты";
 $_['smartpay'] = "Выбор способа оплаты на стороне Яндекс.Кассы";
 $_['shoppay'] = "Выбор способа оплаты на стороне магазина";
 $_['paymode_help'] = "<a href='https://tech.yandex.ru/money/doc/payment-solution/payment-form/payment-form-docpage/' target='_blank'>Подробнее о сценариях оплаты</a>";
 $_['option_help'] = "Отметьте способы оплаты, которые указаны в вашем договоре с Яндекс.Деньгами";
-$_['forwork_money'] = "Для работы с модулем нужно <a href='https://money.yandex.ru/new' target='_blank'>открыть кошелек</a> на Яндексе и <a href='https://sp-money.yandex.ru/myservices/online.xml' target='_blank'>зарегистрировать приложение</a> на сайте Яндекс.Денег";
+$_['forwork_money'] = "";
 $_['enable_money'] = "Включить прием платежей в кошелек на Яндексе";
 $_['redirectUrl_help'] = "Скопируйте эту ссылку в поле Redirect URL на <a href='https://money.yandex.ru/myservices/online.xml' target='_blank'>странице настройки уведомлений</a>.";
 $_['account_head'] = "Настройки приема платежей";
