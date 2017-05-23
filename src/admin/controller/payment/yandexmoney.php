@@ -1,7 +1,7 @@
 <?php 
 class ControllerPaymentYandexMoney extends Controller {
 	private $error = array();
-	private $ya_version= '1.7.3.1';
+	private $ya_version= '1.8';
 	private $lang = array(
 		'setting_head',
 		'license',
@@ -45,6 +45,11 @@ class ControllerPaymentYandexMoney extends Controller {
 		'successMP_help',
 		'namePay_label',
 		'namePay_help',
+        '54lawmode_label',
+		'54lawmode_help',
+		'54lawtaxtable_label',
+        '54lawtax_head',
+        '54lawtax_head_desc',
 		'feature_head',
 		'debug_label',
 		'off',
@@ -78,6 +83,14 @@ class ControllerPaymentYandexMoney extends Controller {
 			"ya_appPassword"
 		)
 	);
+    private $kassa_taxes = array(
+        "1" => "без НДС",
+        "2" => "НДС по ставке 0%",
+        "3" => "НДС чека по ставке 10%",
+        "4" => "НДС чека по ставке 18%",
+        "5" => "НДС чека по расчетной ставке 10/110",
+        "6" => "НДС чека по расчетной ставке 18/118"
+    );
 	private $allow_params = array(
 		"ya_kassamode",
 		"ya_workmode",
@@ -92,6 +105,8 @@ class ControllerPaymentYandexMoney extends Controller {
 		"ya_pageFail",
 		"ya_pageSuccessMP",
 		"ya_namePaySys",
+		"ya_54lawmode",
+		"ya_54lawtax",
 		"ya_newStatus",
 		"ya_debugmode",
 		"ya_moneymode",
@@ -198,7 +213,11 @@ class ControllerPaymentYandexMoney extends Controller {
 
 		$this->load->model('localisation/geo_zone');
 		$this->data['geo_zones'] = $this->model_localisation_geo_zone->getGeoZones();
-		
+
+		$this->load->model('localisation/tax_class');
+		$this->data['tax_classes'] = $this->model_localisation_tax_class->getTaxClasses();
+		$this->data['kassa_taxes'] = $this->kassa_taxes;
+
 		$this->load->model('catalog/information');
 		$this->data['pages_mpos'] = $this->model_catalog_information->getInformations();
 

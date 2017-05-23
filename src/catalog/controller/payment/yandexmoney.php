@@ -20,7 +20,10 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->data['account'] = $this->config->get('ya_wallet');
 		$this->data['shop_id'] = $this->config->get('ya_shopid');
 		$this->data['scid'] = $this->config->get('ya_scid');
-		$this->data['customerNumber'] = trim($order_info['order_id'].' '.$order_info['email']);
+
+        $this->prepare_54law($order_info, $this->data);
+
+        $this->data['customerNumber'] = trim($order_info['order_id'].' '.$order_info['email']);
 		
 		$this->data['shopSuccessURL'] = (!$this->config->get('ya_pageSuccess'))? $this->url->link('checkout/success', '', 'SSL'):$this->url->link('information/information', 'information_id='.$this->config->get('ya_pageSuccess'));
 		$this->data['shopFailURL'] =(!$this->config->get('ya_pageFail'))? $this->url->link('checkout/failure', '', 'SSL'):$this->url->link('information/information', 'information_id='.$this->config->get('ya_pageFail'));
@@ -64,7 +67,37 @@ class ControllerPaymentYandexMoney extends Controller {
 		$this->response->setOutput($this->render());
 
 	}
-	
+	private function prepare_54law($order_info, &$data){
+        $this->load->model('account/order');
+        $this->load->model('catalog/product');
+
+        $kassa_taxRate = $this->config->get('ya_54lawtax');
+        if (!$this->config->get('ya_54lawmode') || $this->config->get('ya_kassamode') != '1') return false;
+        $items =array();
+
+        $order_prodicts = $this->model_account_order->getOrderProducts($this->session->data['order_id']);
+        foreach ($order_prodicts as $prod){
+            $product_info = $this->model_catalog_product->getProduct($prod["product_id"]);
+            $price = new stdClass();
+            $price->amount = round($prod["price"], 2);
+            $price->currency = "RUB";
+
+            $items[] = array(
+                "quantity" => $prod["quantity"],
+                "price" => $price,
+                "tax" => $kassa_taxRate[$product_info['tax_class_id']],
+                "text" => $prod["name"]
+            );
+        }
+        $receipt = new stdClass();
+        if (isset($order_info['email'])){
+            $receipt->customerContact = $order_info['email'];
+        }elseif(isset($order_info['phone'])){
+            $receipt->customerContact = $order_info['phone'];
+        }
+        $receipt->items = $items;
+        $data["receipt"] = htmlentities(json_encode($receipt));
+    }
 	protected function index() {
 		$this->load->model('checkout/order');		
 		$order_info = $this->model_checkout_order->getOrder($this->session->data['order_id']);

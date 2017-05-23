@@ -294,6 +294,48 @@
 								<p class="help-block"><?php echo $lang_namePay_help; ?></p>
 							</div>
 						</div>
+						<!-- 54-ФЗ -->
+                        <?php //echo "<pre>".print_r($ya_54lawtax, true)."</pre>";?>
+						<div class="form-group clsOnlyKassa">
+							<label for="ya_54lawmode" class="col-sm-3 control-label"><?php echo $lang_54lawmode_label; ?></label>
+							<div class="col-sm-9">
+								<label class='radio-inline'>
+									<input type="radio" name="ya_54lawmode" class="cls_ya_54lawmode" onclick='onChange54LawMode()' value='0' <?php if ($ya_54lawmode !='1') { echo "checked"; }?>> <?php echo $lang_off; ?>
+								</label>
+								<label class='radio-inline'>
+									<input type="radio" name="ya_54lawmode" class="cls_ya_54lawmode" onclick='onChange54LawMode()' value='1' <?php if ($ya_54lawmode =='1') { echo "checked"; }?>> <?php echo $lang_on; ?>
+								</label>
+								<p class='help-block'><?php echo $lang_54lawmode_help; ?></p>
+							</div>
+						</div>
+                        <div class="form-group clsOnlyKassa select54Law">
+                            <div class="col-sm-9 col-sm-offset-3">
+                                <p></p><b><?php echo $lang_54lawtax_head; ?></b></p>
+                                <p><?php echo $lang_54lawtax_head_desc; ?></p>
+                                <table class="table table-hover">
+                                	<tbody>
+                                    <?php foreach ($tax_classes as $tax){ ?>
+                                		<tr>
+                                            <td><?php echo $tax['title']; ?></td>
+                                            <td><?php echo $lang_54lawtaxtable_label; ?></td>
+                                			<td>
+                                                <select name="ya_54lawtax[<?php echo $tax['tax_class_id']; ?>]" class="form-control" data-toggle="tooltip" data-placement="left" title="">
+                                                    <?php foreach ($kassa_taxes as $tax_id => $tax_name) { ?>
+                                                        <?php if (isset($ya_54lawtax[$tax['tax_class_id']]) && $tax_id == $ya_54lawtax[$tax['tax_class_id']]) { ?>
+                                                            <option value="<?php echo $tax_id; ?>" selected="selected"><?php echo $tax_name; ?></option>
+                                                        <?php } else { ?>
+                                                            <option value="<?php echo $tax_id; ?>"><?php echo $tax_name; ?></option>
+                                                        <?php } ?>
+                                                    <?php } ?>
+                                                </select>
+                                            </td>
+                                		</tr>
+                                    <?php } ?>
+                                	</tbody>
+                                </table>
+                            </div>
+                        </div>
+						<!-- -->
 					</div>
 				</div>
 			</div>
@@ -364,6 +406,13 @@
 			$(".selectPayOpt").show();
 		}
 	}
+	function onChange54LawMode(){
+		if ($("input[name=ya_54lawmode]:checked").val()=='0'){
+			$(".select54Law").hide();
+		}else{
+			$(".select54Law").show();
+		}
+	}
 	function onChoiseService(){
 		if ($("#tabMoney").hasClass("active")){
 			$(".clsOnlyMoney").show();
@@ -377,6 +426,7 @@
 	$( document ).ready(function( $ ) {
 		var arMethods = [];
 		var selDefault = '';
+
 		$('.cls_ya_paymentOpt').click(function () {
 			var chkPaymentOpt = $('input.cls_ya_paymentOpt:checked');
 			arMethods = chkPaymentOpt.map(function(){
@@ -416,6 +466,7 @@
 		$("li.active > a.my-tabs").trigger( "click" );
 		onChangePayMode();
 		onChoiseService();
+        onChange54LawMode();
 	});
 </script>
 <?php echo $footer; ?>

@@ -34,6 +34,7 @@
 			<input type="hidden" name="shopFailURL" value="<?php echo $shopFailURL; ?>" >
 			<?php if (isset($phone)) { ?> <input type="hidden" name="cps_phone" value="<?php echo $phone;?>"> <?php } ?>
 			<?php if (isset($email)) { ?> <input type="hidden" name="cps_email" value="<?php echo $email;?>"> <?php } ?>
+			<?php if (isset($receipt)) { ?> <input type="hidden" name="receipt" value="<?php echo $receipt;?>"> <?php } ?>
 			<input type="hidden" name="cms_name" value="<?php echo $cmsname; ?>" >
 		<?php }else{ ?>
 			<input type="hidden" name="receiver" value="<?php echo $account; ?>">
