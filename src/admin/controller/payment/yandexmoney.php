@@ -48,6 +48,8 @@ class ControllerPaymentYandexMoney extends Controller {
         '54lawmode_label',
 		'54lawmode_help',
 		'54lawtaxtable_label',
+        '54lawtax_default_head',
+        '54lawtax_default_head_desc',
         '54lawtax_head',
         '54lawtax_head_desc',
 		'feature_head',

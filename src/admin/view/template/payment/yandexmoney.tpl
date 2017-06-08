@@ -309,6 +309,19 @@
 							</div>
 						</div>
                         <div class="form-group clsOnlyKassa select54Law">
+							<div class="col-sm-9 col-sm-offset-3">
+								<p></p><b><?php echo $lang_54lawtax_default_head; ?></b></p>
+								<p><?php echo $lang_54lawtax_default_head_desc; ?></p>
+									<select name="ya_54lawtax[default]" class="form-control" data-toggle="tooltip" data-placement="left" title="">
+										<?php foreach ($kassa_taxes as $tax_id => $tax_name) { ?>
+											<?php if (isset($ya_54lawtax["default"]) && $tax_id == $ya_54lawtax["default"]) { ?>
+												<option value="<?php echo $tax_id; ?>" selected="selected"><?php echo $tax_name; ?></option>
+											<?php } else { ?>
+												<option value="<?php echo $tax_id; ?>"><?php echo $tax_name; ?></option>
+											<?php } ?>
+										<?php } ?>
+									</select>
+							</div>
                             <div class="col-sm-9 col-sm-offset-3">
                                 <p></p><b><?php echo $lang_54lawtax_head; ?></b></p>
                                 <p><?php echo $lang_54lawtax_head_desc; ?></p>
