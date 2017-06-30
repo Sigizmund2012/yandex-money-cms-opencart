@@ -99,7 +99,7 @@ class ControllerPaymentYandexMoney extends Controller
         //Coupon
         //Shipping
         $order_totals = $this->model_account_order->getOrderTotals($this->session->data['order_id']);
-        $shipping = [];
+        $shipping = array();
         $voucherValue = 0;
         $iDisc = 0;
         $iTotal = 0;
