@@ -85,7 +85,7 @@ class ControllerPaymentYandexMoney extends Controller
             $amount = $prod["price"];
             $product_info = $this->model_catalog_product->getProduct($prod["product_id"]);
             $price = new stdClass();
-            $price->amount = $amount;
+            $price->amount = number_format($amount, 2, '.', '');
             $price->currency = "RUB";
             $tax_id = (isset($product_info['tax_class_id'])) ? $product_info['tax_class_id'] : "default";
             $items[] = array(
