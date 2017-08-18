@@ -1,57 +1,98 @@
 <?php
 
+/**
+ * Class ControllerPaymentYandexMoney
+ *
+ * @property-read Language $language
+ */
 class ControllerPaymentYandexMoney extends Controller
 {
     private function payment($order_info, $child = false)
     {
         $this->language->load('payment/yandexmoney');
 
-        $yandexMoney = new YandexMoneyObj();
+        $yandexMoney = new YandexMoneyObj($this->config->get('ya_mode'));
         $yandexMoney->org_mode = (bool)($this->config->get('ya_kassamode') == '1');
         $yandexMoney->password = ($yandexMoney->org_mode) ? $this->config->get('ya_shopPassword') : $this->config->get('ya_appPassword');
         $yandexMoney->shopid = $this->config->get('ya_shopid');
         $yandexMoney->test_mode = (bool)($this->config->get('ya_workmode') != '1');
         $yandexMoney->epl = (bool)($this->config->get('ya_kassamode') == '1' && $this->config->get('ya_paymode') == 'kassa');
 
-        if (isset($order_info['email'])) $this->data['email'] = $order_info['email'];
-        if (isset($order_info['telephone'])) $this->data['phone'] = $order_info['telephone'];
-        $this->data['button_confirm'] = $this->language->get('button_confirm');
-        $this->data['action'] = $yandexMoney->getFormUrl();
-        $this->data['epl'] = $yandexMoney->epl;
-        $this->data['org_mode'] = $yandexMoney->org_mode;
-        $this->data['order_id'] = $order_info['order_id'];
-        $this->data['account'] = $this->config->get('ya_wallet');
-        $this->data['shop_id'] = $this->config->get('ya_shopid');
-        $this->data['scid'] = $this->config->get('ya_scid');
-
-        $this->prepare_54law($order_info, $this->data);
-
-        $this->data['customerNumber'] = trim($order_info['order_id'] . ' ' . $order_info['email']);
-
-        $this->data['shopSuccessURL'] = (!$this->config->get('ya_pageSuccess')) ? $this->url->link('checkout/success', '', 'SSL') : $this->url->link('information/information', 'information_id=' . $this->config->get('ya_pageSuccess'));
-        $this->data['shopFailURL'] = (!$this->config->get('ya_pageFail')) ? $this->url->link('checkout/failure', '', 'SSL') : $this->url->link('information/information', 'information_id=' . $this->config->get('ya_pageFail'));
-
-        $this->data['formcomment'] = $this->config->get('config_name');
-        $this->data['short_dest'] = $this->config->get('config_name');
-        $this->data['comment'] = $order_info['comment'];
-        $this->data['cmsname'] = ($child) ? 'opencart-extracall' : 'opencart';
-        $this->data['sum'] = $this->currency->format($order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false);
-        $this->data['allow_methods'] = array();
-        $this->data['default_method'] = $this->config->get('ya_paymentDfl');
-        foreach (array('PC' => 'ym', 'AC' => 'cards', 'GP' => 'cash', 'MC' => 'mobile', 'WM' => 'wm', 'SB' => 'sb', 'AB' => 'ab', 'PB' => 'pb', 'MA' => 'ma', 'QW' => 'qw', 'QP' => 'qp', 'MP' => 'mp') as $name => $value) {
-            if ((is_array($this->config->get('ya_paymentOpt')) && in_array($name, $this->config->get('ya_paymentOpt')))
-                || (is_array($this->config->get('ya_paymentOpt_wallet')) && in_array($name, $this->config->get('ya_paymentOpt_wallet')))
-            )
-                $this->data['allow_methods'][$name] = $this->language->get('text_method_' . $value);
+        if (isset($order_info['email'])) {
+            $this->data['email'] = $order_info['email'];
         }
-        $this->data['mpos_page_url'] = $this->url->link('payment/yandexmoney/confirm', '', 'SSL');
-        $this->data['method_label'] = $this->language->get('text_method');
-        $this->data['order_text'] = $this->language->get('text_order');
+        if (isset($order_info['telephone'])) {
+            $this->data['phone'] = $order_info['telephone'];
+        }
 
-        if (isset($this->request->server['HTTPS']) && (($this->request->server['HTTPS'] == 'on') || ($this->request->server['HTTPS'] == '1'))) {
-            $this->data['imageurl'] = $this->config->get('config_ssl') . 'image/';
+        $this->data['mode'] = $yandexMoney->getMode();
+        $this->data['cmsname'] = ($child) ? 'opencart-extracall' : 'opencart';
+        $this->data['sum'] = $this->currency->format(
+            $order_info['total'], $order_info['currency_code'], $order_info['currency_value'], false
+        );
+        $this->data['button_confirm'] = $this->language->get('button_confirm');
+        $this->data['comment'] = $order_info['comment'];
+        $this->data['order_id'] = $order_info['order_id'];
+        $this->data['action'] = $yandexMoney->getFormUrl();
+        if ($yandexMoney->getMode() != YandexMoneyObj::MODE_BILLING) {
+            $this->data['epl'] = $yandexMoney->epl;
+            $this->data['org_mode'] = $yandexMoney->org_mode;
+
+            $this->data['account'] = $this->config->get('ya_wallet');
+            $this->data['shop_id'] = $this->config->get('ya_shopid');
+            $this->data['scid'] = $this->config->get('ya_scid');
+
+            $this->prepare_54law($order_info, $this->data);
+
+            $this->data['customerNumber'] = trim($order_info['order_id'] . ' ' . $order_info['email']);
+
+            $this->data['shopSuccessURL'] = (!$this->config->get('ya_pageSuccess')) ? $this->url->link(
+                'checkout/success', '', 'SSL'
+            ) : $this->url->link('information/information', 'information_id=' . $this->config->get('ya_pageSuccess'));
+            $this->data['shopFailURL'] = (!$this->config->get('ya_pageFail')) ? $this->url->link(
+                'checkout/failure', '', 'SSL'
+            ) : $this->url->link('information/information', 'information_id=' . $this->config->get('ya_pageFail'));
+
+            $this->data['formcomment'] = $this->config->get('config_name');
+            $this->data['short_dest'] = $this->config->get('config_name');
+
+            $this->data['allow_methods'] = array();
+            $this->data['default_method'] = $this->config->get('ya_paymentDfl');
+            foreach (array('PC' => 'ym', 'AC' => 'cards', 'GP' => 'cash', 'MC' => 'mobile', 'WM' => 'wm', 'SB' => 'sb', 'AB' => 'ab', 'PB' => 'pb', 'MA' => 'ma', 'QW' => 'qw', 'QP' => 'qp', 'MP' => 'mp') as $name => $value) {
+                if ((is_array($this->config->get('ya_paymentOpt')) && in_array(
+                            $name, $this->config->get('ya_paymentOpt')
+                        ))
+                    || (is_array($this->config->get('ya_paymentOpt_wallet')) && in_array(
+                            $name, $this->config->get(
+                            'ya_paymentOpt_wallet'
+                        )
+                        ))
+                )
+                    $this->data['allow_methods'][$name] = $this->language->get('text_method_' . $value);
+            }
+            $this->data['mpos_page_url'] = $this->url->link('payment/yandexmoney/confirm', '', 'SSL');
+            $this->data['method_label'] = $this->language->get('text_method');
+            $this->data['order_text'] = $this->language->get('text_order');
+
+            if (isset($this->request->server['HTTPS']) && (($this->request->server['HTTPS'] == 'on') || ($this->request->server['HTTPS'] == '1'))) {
+                $this->data['imageurl'] = $this->config->get('config_ssl') . 'image/';
+            } else {
+                $this->data['imageurl'] = $this->config->get('config_url') . 'image/';
+            }
         } else {
-            $this->data['imageurl'] = $this->config->get('config_url') . 'image/';
+            $fio = [];
+            if (!empty($order_info['lastname'])) {
+                $fio[] = $order_info['lastname'];
+            }
+            if (!empty($order_info['firstname'])) {
+                $fio[] = $order_info['firstname'];
+            }
+            $narrative = $this->parsePlaceholders($this->config->get('ya_billing_purpose'), $order_info);
+            $this->data['formId'] = $this->config->get('ya_billing_id');
+            $this->data['narrative'] = $narrative;
+            $this->data['fio'] = implode(' ', $fio);
+
+            $this->updateOrderStatus($order_info['order_id'], $this->config->get('ya_billing_status'), $narrative);
         }
 
         if (file_exists(DIR_TEMPLATE . $this->config->get('config_template') . '/template/payment/yandexmoney.tpl')) {
@@ -69,7 +110,6 @@ class ControllerPaymentYandexMoney extends Controller
         }
         $this->response->addHeader('Content-Type: text/html; charset=utf-8');
         $this->response->setOutput($this->render());
-
     }
 
     private function prepare_54law($order_info, &$data)
@@ -99,7 +139,7 @@ class ControllerPaymentYandexMoney extends Controller
         //Coupon
         //Shipping
         $order_totals = $this->model_account_order->getOrderTotals($this->session->data['order_id']);
-        $shipping = array();
+        $shipping = [];
         $voucherValue = 0;
         $iDisc = 0;
         $iTotal = 0;
@@ -245,10 +285,50 @@ class ControllerPaymentYandexMoney extends Controller
             $ymObj->sendCode($callbackParams, "1");
         }
     }
+
+    private function updateOrderStatus($orderId, $status, $text)
+    {
+        $this->load->model('checkout/order');
+        $this->model_checkout_order->confirm($orderId, $status, $text);
+
+        $this->cart->clear();
+        if (isset($this->session->data['order_id'])) {
+            unset($this->session->data['shipping_method']);
+            unset($this->session->data['shipping_methods']);
+            unset($this->session->data['payment_method']);
+            unset($this->session->data['payment_methods']);
+            unset($this->session->data['guest']);
+            unset($this->session->data['comment']);
+            unset($this->session->data['order_id']);
+            unset($this->session->data['coupon']);
+            unset($this->session->data['reward']);
+            unset($this->session->data['voucher']);
+            unset($this->session->data['vouchers']);
+            unset($this->session->data['totals']);
+        }
+    }
+
+    private function parsePlaceholders($template, $order)
+    {
+        $replace = array();
+        foreach ($order as $key => $value) {
+            if (is_scalar($value)) {
+                $replace['%' . $key . '%'] = $value;
+            }
+        }
+        return strtr($template, $replace);
+    }
 }
 
 Class YandexMoneyObj
 {
+    const MODE_NONE = 0;
+    const MODE_KASSA = 1;
+    const MODE_MONEY = 2;
+    const MODE_BILLING = 3;
+
+    private $mode;
+
     public $test_mode;//
     public $org_mode; //
     public $epl;        //
@@ -256,10 +336,23 @@ Class YandexMoneyObj
     public $shopid;    //
     public $password;    //
 
+    public function __construct($mode)
+    {
+        $this->mode = (int)$mode;
+    }
+
+    public function getMode()
+    {
+        return $this->mode;
+    }
+
     public function getFormUrl()
-    { //
-        $demo = ($this->test_mode) ? 'https://demomoney.yandex.ru/' : 'https://money.yandex.ru/';
-        return ($this->org_mode) ? $demo . 'eshop.xml' : $demo . 'quickpay/confirm.xml';
+    {
+        if ($this->mode !== self::MODE_BILLING) {
+            $demo = ($this->test_mode) ? 'https://demomoney.yandex.ru/' : 'https://money.yandex.ru/';
+            return ($this->org_mode) ? $demo . 'eshop.xml' : $demo . 'quickpay/confirm.xml';
+        }
+        return 'https://money.yandex.ru/fastpay/confirm';
     }
 
     public function checkSign($callbackParams)

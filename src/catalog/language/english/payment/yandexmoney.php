@@ -19,5 +19,3 @@ $_['text_method_mp']         = 'Мобильный терминал';
 $_['text_repay']       = 'Оплатить';
 $_['text_order'] = 'Order';
 $_['text_comment'] = 'Comment';
-
-?>
