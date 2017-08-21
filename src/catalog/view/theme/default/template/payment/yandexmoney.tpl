@@ -38,7 +38,9 @@ endif; ?>
             <input type="hidden" name="shopFailURL" value="<?php echo $shopFailURL; ?>" >
             <?php if (isset($phone)): ?> <input type="hidden" name="cps_phone" value="<?php echo $phone;?>"> <?php endif; ?>
             <?php if (isset($email)): ?> <input type="hidden" name="cps_email" value="<?php echo $email;?>"> <?php endif; ?>
-            <?php if (isset($receipt)): ?> <input type="hidden" name="ym_merchant_receipt" value="<?php echo $receipt; ?>"> <?php endif; ?>
+            <?php if (isset($receipt)): ?>
+                <textarea name="ym_merchant_receipt" style="display:none;"><?php echo $receipt; ?></textarea>
+            <?php endif; ?>
             <input type="hidden" name="cms_name" value="<?php echo $cmsname; ?>" >
         <?php else: ?>
             <input type="hidden" name="receiver" value="<?php echo $account; ?>">
@@ -112,4 +114,6 @@ endif; ?>
         });
     //--></script>
 <?php endif; ?>
-<?php if (isset($footer)) echo $footer;?>
+<?php if (isset($footer)):
+    echo $footer;
+endif; ?>

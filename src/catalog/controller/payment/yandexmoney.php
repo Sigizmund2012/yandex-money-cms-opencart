@@ -117,92 +117,37 @@ class ControllerPaymentYandexMoney extends Controller
         $this->load->model('account/order');
         $this->load->model('catalog/product');
 
-        $kassa_taxRate = $this->config->get('ya_54lawtax');
         if (!$this->config->get('ya_54lawmode') || $this->config->get('ya_kassamode') != '1') return false;
-        $items = array();
+
+        $kassa_taxRate = $this->config->get('ya_54lawtax');
+        $receipt = new YandexMoneyReceipt($kassa_taxRate['default'], 'RUB');
         $order_products = $this->model_account_order->getOrderProducts($this->session->data['order_id']);
         foreach ($order_products as $prod) {
-            $amount = $prod["price"];
             $product_info = $this->model_catalog_product->getProduct($prod["product_id"]);
-            $price = new stdClass();
-            $price->amount = number_format($amount, 2, '.', '');
-            $price->currency = "RUB";
             $tax_id = (isset($product_info['tax_class_id'])) ? $product_info['tax_class_id'] : "default";
-            $items[] = array(
-                "quantity" => $prod["quantity"],
-                "price" => $price,
-                "tax" => isset($kassa_taxRate[$tax_id]) ? $kassa_taxRate[$tax_id] : $kassa_taxRate["default"],
-                "text" => $prod["name"]
-            );
-            //$subTotal += $price->amount*$prod["quantity"];
+            $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"], $kassa_taxRate[$tax_id]);
         }
-        //Coupon
-        //Shipping
+
         $order_totals = $this->model_account_order->getOrderTotals($this->session->data['order_id']);
-        $shipping = [];
-        $voucherValue = 0;
-        $iDisc = 0;
         $iTotal = 0;
-        $iSubTotal = 0;
-        $iShip = 0;
-
         foreach ($order_totals as $total) {
-            if (isset($total["code"])) {
-                switch ($total["code"]) {
-                    case "shipping":
-                        $price = new stdClass();
-                        $price->amount = round($total["value"], 2);
-                        $price->currency = "RUB";
-                        $tax_id = (isset($total['tax_class_id'])) ? $total['tax_class_id'] : "default";
-                        $shipping = array(
-                            "quantity" => 1,
-                            "price" => $price,
-                            "tax" => $kassa_taxRate[$tax_id],
-                            "text" => $total["title"]
-                        );
-                        $iShip = $total["value"];
-                        break;
-                    case "coupon":
-                        $iDisc = $total["value"];
-                        //$subTotal += abs($total["value"]);
-                        break;
-                    case "voucher":
-                        $voucherValue = $total["value"];
-                        break;
-                    case "sub_total":
-                        $iSubTotal = $total["value"];
-                        break;
-                    case "total":
-                        $iTotal = $total["value"];
-                        break;
-                }
+            if (isset($total["code"]) && $total["code"] === "shipping") {
+                $tax_id = (isset($total['tax_class_id'])) ? $total['tax_class_id'] : "default";
+                $receipt->addShipping($total["title"], $total["value"], $kassa_taxRate[$tax_id]);
+            } elseif (isset($total["code"]) && $total["code"] === "total") {
+                $iTotal = $total["value"];
             }
         }
 
-        if ($iDisc || $voucherValue) {
-            $subTotalPercent = $iSubTotal / 100;
-            $discount = abs($iDisc) + abs($voucherValue);
-            $percentDiscount = $discount / $subTotalPercent;
-            foreach ($items as $item1) {
-                $itemPercent = $item1["price"]->amount / 100  * $percentDiscount;
-                $item1["price"]->amount = round($item1["price"]->amount - $itemPercent, 2);
-            }
-        }
+        $receipt->normalize(round($iTotal, 2));
 
-        $receipt = new stdClass();
         if (isset($order_info['email'])) {
-            $receipt->customerContact = $order_info['email'];
+            $receipt->setCustomerContact($order_info['email']);
         } elseif (isset($order_info['phone'])) {
-            $receipt->customerContact = $order_info['phone'];
+            $receipt->setCustomerContact($order_info['phone']);
         }
 
-        if (!empty($shipping)) {
-            $items[] = $shipping;
-        }
-
-        $receipt->items = $items;
-
-        $data["receipt"] = htmlentities(json_encode($receipt));
+        $data["receipt"] = $receipt->getJson();
     }
 
     protected function index()
@@ -382,4 +327,329 @@ Class YandexMoneyObj
     }
 }
 
-?>
+if (!interface_exists('JsonSerializable')) {
+    interface JsonSerializable
+    {
+        public function JsonSerialize();
+    }
+}
+
+/**
+ * Класс чека
+ */
+class YandexMoneyReceipt implements JsonSerializable
+{
+    /** @var YandexMoneyReceiptItem[] Массив с информацией о покупаемых товарах */
+    private $items;
+
+    /** @var string Контакт покупателя, куда будет отправлен чек - либо имэйл, либо номер телефона */
+    private $customerContact;
+
+    /** @var int Идентификатор ставки НДС по умолчанию */
+    private $taxRateId;
+
+    /** @var string Валюта в которой производится платёж */
+    private $currency;
+
+    /** @var YandexMoneyReceiptItem|null Айтем в котором хранится информация о доставке как о товаре */
+    private $shipping;
+
+    /**
+     * @param int $taxRateId
+     * @param string $currency
+     */
+    public function __construct($taxRateId, $currency = 'RUB')
+    {
+        $this->taxRateId = $taxRateId;
+        $this->items = array();
+        $this->currency = $currency;
+    }
+
+    /**
+     * Добавляет в чек товар
+     * @param string $title Название товара
+     * @param float $price Цена товара
+     * @param float $quantity Количество покупаемого товара
+     * @param int|null $taxId Идентификатор ставки НДС для товара или null
+     * @return YandexMoneyReceipt
+     */
+    public function addItem($title, $price, $quantity = 1.0, $taxId = null)
+    {
+        $this->items[] = new YandexMoneyReceiptItem($title, $quantity, $price, false, $taxId);
+        return $this;
+    }
+
+    /**
+     * Добавляет в чек доставку
+     * @param string $title Название способа доставки
+     * @param float $price Цена доставки
+     * @param int|null $taxId Идентификатор ставки НДС для доставки или null
+     * @return YandexMoneyReceipt
+     */
+    public function addShipping($title, $price, $taxId = null)
+    {
+        $this->shipping = new YandexMoneyReceiptItem($title, 1.0, $price, true, $taxId);
+        $this->items[] = $this->shipping;
+        return $this;
+    }
+
+    /**
+     * Устанавливает адрес доставки чека - или имейл или номер телефона
+     * @param string $value Номер телефона или имэйл получателя
+     * @return YandexMoneyReceipt
+     */
+    public function setCustomerContact($value)
+    {
+        $this->customerContact = $value;
+        return $this;
+    }
+
+    /**
+     * Возвращает стоимость заказа исходя из состава чека
+     * @param bool $withShipping Добавить ли к стоимости заказа стоимость доставки
+     * @return float Общая стоимость заказа
+     */
+    public function getAmount($withShipping = true)
+    {
+        $result = 0.0;
+        foreach ($this->items as $item) {
+            if ($withShipping || !$item->isShipping()) {
+                $result += $item->getAmount();
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Преобразует чек в массив для дальнейшей его отправки в JSON формате
+     * @return array Ассоциативный массив с чеком, готовый для отправки в JSON формате
+     */
+    public function jsonSerialize()
+    {
+        $items = array();
+
+        foreach ($this->items as $item) {
+            if ($item->getPrice() >= 0.0) {
+                $items[] = array(
+                    'quantity' => (string)$item->getQuantity(),
+                    'price' => array(
+                        'amount' => number_format($item->getPrice(), 2, '.', ''),
+                        'currency' => $this->currency,
+                    ),
+                    'tax' => $item->hasTaxId() ? $item->getTaxId() : $this->taxRateId,
+                    'text' => $this->escapeString($item->getTitle()),
+                );
+            }
+        }
+        return array(
+            'items' => $items,
+            'customerContact' => $this->escapeString($this->customerContact),
+        );
+    }
+
+    /**
+     * Сериализует чек в JSON формат
+     * @return string Чек в JSON формате
+     */
+    public function getJson()
+    {
+        if (defined('JSON_UNESCAPED_UNICODE')) {
+            return json_encode($this->jsonSerialize(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } else {
+            // для версий PHP которые не поддерживают передачу параметров в json_encode
+            // заменяем в полученной при сериализации строке уникод последовательности
+            // вида \u1234 на их реальное значение в utf-8
+            return preg_replace_callback('/\\\\u(\w{4})/', function ($matches) {
+                return html_entity_decode('&#x' . $matches[1] . ';', ENT_COMPAT, 'UTF-8');
+            }, json_encode($this->jsonSerialize()));
+        }
+    }
+
+    /**
+     * Подгоняет стоимость товаров в чеке к общей цене заказа
+     * @param float $orderAmount Общая стоимость заказа
+     * @param bool $withShipping Поменять ли заодно и цену доставки
+     * @return YandexMoneyReceipt
+     */
+    public function normalize($orderAmount, $withShipping = false)
+    {
+        if (!$withShipping) {
+            if ($this->shipping !== null) {
+                $orderAmount -= $this->shipping->getAmount();
+            }
+        }
+        $realAmount = $this->getAmount($withShipping);
+        if ($realAmount != $orderAmount) {
+            $coefficient = $orderAmount / $realAmount;
+            $realAmount = 0.0;
+            $aloneId = null;
+            foreach ($this->items as $index => $item) {
+                if ($withShipping || !$item->isShipping()) {
+                    $item->applyDiscountCoefficient($coefficient);
+                    $realAmount += $item->getAmount();
+                    if ($aloneId === null && $item->getQuantity() === 1.0) {
+                        $aloneId = $index;
+                    }
+                }
+            }
+            if ($aloneId === null) {
+                $aloneId = 0;
+            }
+            $diff = $orderAmount - $realAmount;
+            if (abs($diff) >= 0.001) {
+                if ($this->items[$aloneId]->getQuantity() === 1.0) {
+                    $this->items[$aloneId]->increasePrice($diff);
+                } else {
+                    $item = $this->items[0]->fetchItem(1);
+                    $item->increasePrice($diff);
+                    array_splice($this->items, $aloneId + 1, 0, array($item));
+                }
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Деэскейпирует строку для вставки в JSON
+     * @param string $string Исходная строка
+     * @return string Строка с эскейпированными "<" и ">"
+     */
+    private function escapeString($string)
+    {
+        return str_replace(array('<', '>'), array('&lt;', '&gt;'), html_entity_decode($string));
+    }
+}
+
+/**
+ * Класс товара в чеке
+ */
+class YandexMoneyReceiptItem
+{
+    /** @var string Название товара */
+    private $title;
+
+    /** @var float Количество покупаемого товара */
+    private $quantity;
+
+    /** @var float Цена товара */
+    private $price;
+
+    /** @var bool Является ли наименование доставкой товара */
+    private $shipping;
+
+    /** @var int|null Идентификатор ставки НДС для конкретного товара */
+    private $taxId;
+
+    /**
+     * YandexMoneyReceiptItem constructor.
+     * @param string $title
+     * @param float $quantity
+     * @param float $price
+     * @param bool $isShipping
+     * @param int|null $taxId
+     */
+    public function __construct($title, $quantity, $price, $isShipping, $taxId)
+    {
+        $this->title = mb_substr($title, 0, 60, 'utf-8');
+        $this->quantity = (float)$quantity;
+        $this->price = round($price, 2);
+        $this->shipping = $isShipping;
+        $this->taxId = $taxId;
+    }
+
+    /**
+     * Возвращает цену товара
+     * @return float Цена товара
+     */
+    public function getPrice()
+    {
+        return $this->price;
+    }
+
+    /**
+     * Возвращает общую стоимость позиции в чеке
+     * @return float Стоимость покупаемого товара
+     */
+    public function getAmount()
+    {
+        return round($this->price * $this->quantity, 2);
+    }
+
+    /**
+     * Возвращает название товара
+     * @return string Название товара
+     */
+    public function getTitle()
+    {
+        return $this->title;
+    }
+
+    /**
+     * Возвращает количество покупаемого товара
+     * @return float Количество товара
+     */
+    public function getQuantity()
+    {
+        return $this->quantity;
+    }
+
+    /**
+     * Проверяет, установлена ли для товара ставка НДС
+     * @return bool True если ставка НДС для товара установлена, false если нет
+     */
+    public function hasTaxId()
+    {
+        return $this->taxId !== null;
+    }
+
+    /**
+     * Возвращает ставку НДС товара
+     * @return int|null Идентификатор ставки НДС или null если он не был установлен
+     */
+    public function getTaxId()
+    {
+        return $this->taxId;
+    }
+
+    /**
+     * Привеняет для товара скидку
+     * @param float $value Множитель скидки
+     */
+    public function applyDiscountCoefficient($value)
+    {
+        $this->price = round($value * $this->price, 2);
+    }
+
+    /**
+     * Увеличивает цену товара на указанную величину
+     * @param float $value Сумма на которую цену товара увеличиваем
+     */
+    public function increasePrice($value)
+    {
+        $this->price = round($this->price + $value, 2);
+    }
+
+    /**
+     * Уменьшает количество покупаемого товара на указанное, возвращает объект позиции в чеке с уменьшаемым количеством
+     * @param float $count Количество на которое уменьшаем позицию в чеке
+     * @return YandexMoneyReceiptItem Новый инстанс позиции в чеке
+     */
+    public function fetchItem($count)
+    {
+        if ($count > $this->quantity) {
+            throw new BadMethodCallException();
+        }
+        $result = new YandexMoneyReceiptItem($this->title, $count, $this->price, false, $this->taxId);
+        $this->quantity -= $count;
+        return $result;
+    }
+
+    /**
+     * Проверяет является ли текущая позиция доставкой товара
+     * @return bool True если доставка товара, false если нет
+     */
+    public function isShipping()
+    {
+        return $this->shipping;
+    }
+}
