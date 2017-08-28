@@ -276,9 +276,73 @@ class ControllerPaymentYandexMoney extends Controller
     }
 }
 
-if (!interface_exists('JsonSerializable', false)) {
-    interface JsonSerializable {
-        function jsonSerialize();
+class YandexMoneyObj
+{
+    const MODE_NONE = 0;
+    const MODE_KASSA = 1;
+    const MODE_MONEY = 2;
+    const MODE_BILLING = 3;
+
+    private $mode;
+
+    public $test_mode;//
+    public $org_mode; //
+    public $epl;        //
+
+    public $shopid;    //
+    public $password;    //
+
+    public function __construct($mode)
+    {
+        $this->mode = (int)$mode;
+    }
+
+    public function getMode()
+    {
+        return $this->mode;
+    }
+
+    public function getFormUrl()
+    {
+        if ($this->mode !== self::MODE_BILLING) {
+            $demo = ($this->test_mode) ? 'https://demomoney.yandex.ru/' : 'https://money.yandex.ru/';
+            return ($this->org_mode) ? $demo . 'eshop.xml' : $demo . 'quickpay/confirm.xml';
+        }
+        return 'https://money.yandex.ru/fastpay/confirm';
+    }
+
+    public function checkSign($callbackParams)
+    { //
+        if ($this->org_mode) {
+            $string = $callbackParams['action'] . ';' . $callbackParams['orderSumAmount'] . ';' . $callbackParams['orderSumCurrencyPaycash'] . ';' . $callbackParams['orderSumBankPaycash'] . ';' . $callbackParams['shopId'] . ';' . $callbackParams['invoiceId'] . ';' . $callbackParams['customerNumber'] . ';' . $this->password;
+            $md5 = strtoupper(md5($string));
+            return (strtoupper($callbackParams['md5']) == $md5);
+        } else {
+            $string = $callbackParams['notification_type'] . '&' . $callbackParams['operation_id'] . '&' . $callbackParams['amount'] . '&' . $callbackParams['currency'] . '&' . $callbackParams['datetime'] . '&' . $callbackParams['sender'] . '&' . $callbackParams['codepro'] . '&' . $this->password . '&' . $callbackParams['label'];
+            $check = (sha1($string) == $callbackParams['sha1_hash']);
+            if (!$check) {
+                header('HTTP/1.0 401 Unauthorized');
+                return false;
+            }
+            return true;
+        }
+    }
+
+    public function sendCode($callbackParams, $code)
+    { //
+        if (!$this->org_mode) return false;
+        header("Content-type: text/xml; charset=utf-8");
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<' . $callbackParams['action'] . 'Response performedDatetime="' . date("c") . '" code="' . $code
+            . '" invoiceId="' . $callbackParams['invoiceId'] . '" shopId="' . $this->shopid . '"/>';
+        echo $xml;
+    }
+}
+
+if (!interface_exists('JsonSerializable')) {
+    interface JsonSerializable
+    {
+        function JsonSerialize();
     }
 }
 
