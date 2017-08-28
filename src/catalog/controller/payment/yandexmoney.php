@@ -121,9 +121,9 @@ class ControllerPaymentYandexMoney extends Controller
 
         $taxRates = $this->config->get('ya_54lawtax');
         if (empty($taxRates) || !isset($taxRates['default'])) {
-            $taxRates['default'] = 1;
+            $taxRates['default'] = YandexMoneyReceipt::DEFAULT_TAX_RATE_ID;
         }
-        $receipt = new YandexMoneyReceipt($taxRates['default'], 'RUB');
+        $receipt = new YandexMoneyReceipt($taxRates['default'], YandexMoneyReceipt::DEFAULT_CURRENCY);
         $order_products = $this->model_account_order->getOrderProducts($this->session->data['order_id']);
         foreach ($order_products as $prod) {
             $product_info = $this->model_catalog_product->getProduct($prod["product_id"]);
@@ -276,72 +276,9 @@ class ControllerPaymentYandexMoney extends Controller
     }
 }
 
-Class YandexMoneyObj
-{
-    const MODE_NONE = 0;
-    const MODE_KASSA = 1;
-    const MODE_MONEY = 2;
-    const MODE_BILLING = 3;
-
-    private $mode;
-
-    public $test_mode;//
-    public $org_mode; //
-    public $epl;        //
-
-    public $shopid;    //
-    public $password;    //
-
-    public function __construct($mode)
-    {
-        $this->mode = (int)$mode;
-    }
-
-    public function getMode()
-    {
-        return $this->mode;
-    }
-
-    public function getFormUrl()
-    {
-        if ($this->mode !== self::MODE_BILLING) {
-            $demo = ($this->test_mode) ? 'https://demomoney.yandex.ru/' : 'https://money.yandex.ru/';
-            return ($this->org_mode) ? $demo . 'eshop.xml' : $demo . 'quickpay/confirm.xml';
-        }
-        return 'https://money.yandex.ru/fastpay/confirm';
-    }
-
-    public function checkSign($callbackParams)
-    { //
-        if ($this->org_mode) {
-            $string = $callbackParams['action'] . ';' . $callbackParams['orderSumAmount'] . ';' . $callbackParams['orderSumCurrencyPaycash'] . ';' . $callbackParams['orderSumBankPaycash'] . ';' . $callbackParams['shopId'] . ';' . $callbackParams['invoiceId'] . ';' . $callbackParams['customerNumber'] . ';' . $this->password;
-            $md5 = strtoupper(md5($string));
-            return (strtoupper($callbackParams['md5']) == $md5);
-        } else {
-            $string = $callbackParams['notification_type'] . '&' . $callbackParams['operation_id'] . '&' . $callbackParams['amount'] . '&' . $callbackParams['currency'] . '&' . $callbackParams['datetime'] . '&' . $callbackParams['sender'] . '&' . $callbackParams['codepro'] . '&' . $this->password . '&' . $callbackParams['label'];
-            $check = (sha1($string) == $callbackParams['sha1_hash']);
-            if (!$check) {
-                header('HTTP/1.0 401 Unauthorized');
-                return false;
-            }
-            return true;
-        }
-    }
-
-    public function sendCode($callbackParams, $code)
-    { //
-        if (!$this->org_mode) return false;
-        header("Content-type: text/xml; charset=utf-8");
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>
-			<' . $callbackParams['action'] . 'Response performedDatetime="' . date("c") . '" code="' . $code . '" invoiceId="' . $callbackParams['invoiceId'] . '" shopId="' . $this->shopid . '"/>';
-        echo $xml;
-    }
-}
-
-if (!interface_exists('JsonSerializable')) {
-    interface JsonSerializable
-    {
-        public function JsonSerialize();
+if (!interface_exists('JsonSerializable', false)) {
+    interface JsonSerializable {
+        function jsonSerialize();
     }
 }
 
@@ -350,6 +287,15 @@ if (!interface_exists('JsonSerializable')) {
  */
 class YandexMoneyReceipt implements JsonSerializable
 {
+    /** @var string Код валюты - рубли */
+    const CURRENCY_RUB = 'RUB';
+
+    /** @var string Используемая по умолчанию валюта */
+    const DEFAULT_CURRENCY = self::CURRENCY_RUB;
+
+    /** @var int Идентификатор ставки НДС по умолчанию */
+    const DEFAULT_TAX_RATE_ID = 1;
+
     /** @var YandexMoneyReceiptItem[] Массив с информацией о покупаемых товарах */
     private $items;
 
@@ -369,7 +315,7 @@ class YandexMoneyReceipt implements JsonSerializable
      * @param int $taxRateId
      * @param string $currency
      */
-    public function __construct($taxRateId, $currency = 'RUB')
+    public function __construct($taxRateId = self::DEFAULT_TAX_RATE_ID, $currency = self::DEFAULT_CURRENCY)
     {
         $this->taxRateId = $taxRateId;
         $this->items = array();
@@ -470,10 +416,17 @@ class YandexMoneyReceipt implements JsonSerializable
             // для версий PHP которые не поддерживают передачу параметров в json_encode
             // заменяем в полученной при сериализации строке уникод последовательности
             // вида \u1234 на их реальное значение в utf-8
-            return preg_replace_callback('/\\\\u(\w{4})/', function ($matches) {
-                return html_entity_decode('&#x' . $matches[1] . ';', ENT_COMPAT, 'UTF-8');
-            }, json_encode($this->jsonSerialize()));
+            return preg_replace_callback(
+                '/\\\\u(\w{4})/',
+                array($this, 'legacyReplaceUnicodeMatches'),
+                json_encode($this->jsonSerialize())
+            );
         }
+    }
+
+    public function legacyReplaceUnicodeMatches($matches)
+    {
+        return html_entity_decode('&#x' . $matches[1] . ';', ENT_COMPAT, 'UTF-8');
     }
 
     /**
