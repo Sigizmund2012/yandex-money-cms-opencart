@@ -80,7 +80,7 @@ class ControllerPaymentYandexMoney extends Controller
                 $this->data['imageurl'] = $this->config->get('config_url') . 'image/';
             }
         } else {
-            $fio = [];
+            $fio = array();
             if (!empty($order_info['lastname'])) {
                 $fio[] = $order_info['lastname'];
             }
@@ -119,21 +119,32 @@ class ControllerPaymentYandexMoney extends Controller
 
         if (!$this->config->get('ya_54lawmode') || $this->config->get('ya_kassamode') != '1') return false;
 
-        $kassa_taxRate = $this->config->get('ya_54lawtax');
-        $receipt = new YandexMoneyReceipt($kassa_taxRate['default'], 'RUB');
+        $taxRates = $this->config->get('ya_54lawtax');
+        if (empty($taxRates) || !isset($taxRates['default'])) {
+            $taxRates['default'] = 1;
+        }
+        $receipt = new YandexMoneyReceipt($taxRates['default'], 'RUB');
         $order_products = $this->model_account_order->getOrderProducts($this->session->data['order_id']);
         foreach ($order_products as $prod) {
             $product_info = $this->model_catalog_product->getProduct($prod["product_id"]);
-            $tax_id = (isset($product_info['tax_class_id'])) ? $product_info['tax_class_id'] : "default";
-            $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"], $kassa_taxRate[$tax_id]);
+            if (isset($product_info['tax_class_id']) && isset($taxRates[$product_info['tax_class_id']])) {
+                $taxId = $taxRates[$product_info['tax_class_id']];
+                $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"], $taxId);
+            } else {
+                $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"]);
+            }
         }
 
         $order_totals = $this->model_account_order->getOrderTotals($this->session->data['order_id']);
         $iTotal = 0;
         foreach ($order_totals as $total) {
             if (isset($total["code"]) && $total["code"] === "shipping") {
-                $tax_id = (isset($total['tax_class_id'])) ? $total['tax_class_id'] : "default";
-                $receipt->addShipping($total["title"], $total["value"], $kassa_taxRate[$tax_id]);
+                if (isset($total['tax_class_id']) && isset($taxRates[$total['tax_class_id']])) {
+                    $taxId = $taxRates[$total['tax_class_id']];
+                    $receipt->addShipping($total["title"], $total["value"], $taxId);
+                } else {
+                    $receipt->addShipping($total["title"], $total["value"]);
+                }
             } elseif (isset($total["code"]) && $total["code"] === "total") {
                 $iTotal = $total["value"];
             }
@@ -459,17 +470,10 @@ class YandexMoneyReceipt implements JsonSerializable
             // для версий PHP которые не поддерживают передачу параметров в json_encode
             // заменяем в полученной при сериализации строке уникод последовательности
             // вида \u1234 на их реальное значение в utf-8
-            return preg_replace_callback(
-                '/\\\\u(\w{4})/',
-                array($this, 'legacyReplaceUnicodeMatches'),
-                json_encode($this->jsonSerialize())
-            );
+            return preg_replace_callback('/\\\\u(\w{4})/', function ($matches) {
+                return html_entity_decode('&#x' . $matches[1] . ';', ENT_COMPAT, 'UTF-8');
+            }, json_encode($this->jsonSerialize()));
         }
-    }
-
-    public function legacyReplaceUnicodeMatches($matches)
-    {
-        return html_entity_decode('&#x' . $matches[1] . ';', ENT_COMPAT, 'UTF-8');
     }
 
     /**
