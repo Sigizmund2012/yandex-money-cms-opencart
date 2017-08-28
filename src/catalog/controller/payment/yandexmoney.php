@@ -80,7 +80,7 @@ class ControllerPaymentYandexMoney extends Controller
                 $this->data['imageurl'] = $this->config->get('config_url') . 'image/';
             }
         } else {
-            $fio = [];
+            $fio = array();
             if (!empty($order_info['lastname'])) {
                 $fio[] = $order_info['lastname'];
             }
@@ -119,21 +119,32 @@ class ControllerPaymentYandexMoney extends Controller
 
         if (!$this->config->get('ya_54lawmode') || $this->config->get('ya_kassamode') != '1') return false;
 
-        $kassa_taxRate = $this->config->get('ya_54lawtax');
-        $receipt = new YandexMoneyReceipt($kassa_taxRate['default'], 'RUB');
+        $taxRates = $this->config->get('ya_54lawtax');
+        if (empty($taxRates) || !isset($taxRates['default'])) {
+            $taxRates['default'] = YandexMoneyReceipt::DEFAULT_TAX_RATE_ID;
+        }
+        $receipt = new YandexMoneyReceipt($taxRates['default'], YandexMoneyReceipt::DEFAULT_CURRENCY);
         $order_products = $this->model_account_order->getOrderProducts($this->session->data['order_id']);
         foreach ($order_products as $prod) {
             $product_info = $this->model_catalog_product->getProduct($prod["product_id"]);
-            $tax_id = (isset($product_info['tax_class_id'])) ? $product_info['tax_class_id'] : "default";
-            $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"], $kassa_taxRate[$tax_id]);
+            if (isset($product_info['tax_class_id']) && isset($taxRates[$product_info['tax_class_id']])) {
+                $taxId = $taxRates[$product_info['tax_class_id']];
+                $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"], $taxId);
+            } else {
+                $receipt->addItem($prod["name"], $prod["price"], $prod["quantity"]);
+            }
         }
 
         $order_totals = $this->model_account_order->getOrderTotals($this->session->data['order_id']);
         $iTotal = 0;
         foreach ($order_totals as $total) {
             if (isset($total["code"]) && $total["code"] === "shipping") {
-                $tax_id = (isset($total['tax_class_id'])) ? $total['tax_class_id'] : "default";
-                $receipt->addShipping($total["title"], $total["value"], $kassa_taxRate[$tax_id]);
+                if (isset($total['tax_class_id']) && isset($taxRates[$total['tax_class_id']])) {
+                    $taxId = $taxRates[$total['tax_class_id']];
+                    $receipt->addShipping($total["title"], $total["value"], $taxId);
+                } else {
+                    $receipt->addShipping($total["title"], $total["value"]);
+                }
             } elseif (isset($total["code"]) && $total["code"] === "total") {
                 $iTotal = $total["value"];
             }
@@ -265,7 +276,7 @@ class ControllerPaymentYandexMoney extends Controller
     }
 }
 
-Class YandexMoneyObj
+class YandexMoneyObj
 {
     const MODE_NONE = 0;
     const MODE_KASSA = 1;
@@ -321,8 +332,9 @@ Class YandexMoneyObj
     { //
         if (!$this->org_mode) return false;
         header("Content-type: text/xml; charset=utf-8");
-        $xml = '<?xml version="1.0" encoding="UTF-8"?>
-			<' . $callbackParams['action'] . 'Response performedDatetime="' . date("c") . '" code="' . $code . '" invoiceId="' . $callbackParams['invoiceId'] . '" shopId="' . $this->shopid . '"/>';
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<' . $callbackParams['action'] . 'Response performedDatetime="' . date("c") . '" code="' . $code
+            . '" invoiceId="' . $callbackParams['invoiceId'] . '" shopId="' . $this->shopid . '"/>';
         echo $xml;
     }
 }
@@ -330,7 +342,7 @@ Class YandexMoneyObj
 if (!interface_exists('JsonSerializable')) {
     interface JsonSerializable
     {
-        public function JsonSerialize();
+        function JsonSerialize();
     }
 }
 
@@ -339,6 +351,15 @@ if (!interface_exists('JsonSerializable')) {
  */
 class YandexMoneyReceipt implements JsonSerializable
 {
+    /** @var string Код валюты - рубли */
+    const CURRENCY_RUB = 'RUB';
+
+    /** @var string Используемая по умолчанию валюта */
+    const DEFAULT_CURRENCY = self::CURRENCY_RUB;
+
+    /** @var int Идентификатор ставки НДС по умолчанию */
+    const DEFAULT_TAX_RATE_ID = 1;
+
     /** @var YandexMoneyReceiptItem[] Массив с информацией о покупаемых товарах */
     private $items;
 
@@ -358,7 +379,7 @@ class YandexMoneyReceipt implements JsonSerializable
      * @param int $taxRateId
      * @param string $currency
      */
-    public function __construct($taxRateId, $currency = 'RUB')
+    public function __construct($taxRateId = self::DEFAULT_TAX_RATE_ID, $currency = self::DEFAULT_CURRENCY)
     {
         $this->taxRateId = $taxRateId;
         $this->items = array();
