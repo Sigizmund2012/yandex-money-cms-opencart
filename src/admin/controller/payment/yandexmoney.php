@@ -16,7 +16,7 @@ class ControllerPaymentYandexMoney extends Controller
 
     private $error = array();
 
-    private $ya_version = '1.8';
+    private $ya_version = '1.8.2';
 
     private $lang = array(
         'setting_head',
