@@ -197,7 +197,7 @@ class ControllerPaymentYandexMoney extends Controller
 
     public function callback()
     {
-        $ymObj = new YandexMoneyObj();
+        $ymObj = new YandexMoneyObj($this->config->get('ya_mode'));
         $callbackParams = $_POST;
         if ($_SERVER['REQUEST_METHOD'] == "GET") {
             echo "You aren't Yandex.Money. We use module for Opencart 1.5.x";
@@ -521,15 +521,30 @@ class YandexMoneyReceipt implements JsonSerializable
                 }
             }
             if ($aloneId === null) {
+                foreach ($this->items as $index => $item) {
+                    if ($withShipping || !$item->isShipping()) {
+                        if ($aloneId === null && $item->getQuantity() > 1.0) {
+                            $aloneId = $index;
+                            break;
+                        }
+                    }
+                }
+            }
+            if ($aloneId === null) {
                 $aloneId = 0;
             }
             $diff = $orderAmount - $realAmount;
             if (abs($diff) >= 0.001) {
                 if ($this->items[$aloneId]->getQuantity() === 1.0) {
                     $this->items[$aloneId]->increasePrice($diff);
-                } else {
-                    $item = $this->items[0]->fetchItem(1);
+                } elseif ($this->items[$aloneId]->getQuantity() > 1.0) {
+                    $item = $this->items[$aloneId]->fetchItem(1);
                     $item->increasePrice($diff);
+                    array_splice($this->items, $aloneId + 1, 0, array($item));
+                } else {
+                    $qty = $this->items[$aloneId]->getQuantity() / 2.0;
+                    $item = $this->items[$aloneId]->fetchItem($qty);
+                    $item->increasePrice($diff / $qty);
                     array_splice($this->items, $aloneId + 1, 0, array($item));
                 }
             }
