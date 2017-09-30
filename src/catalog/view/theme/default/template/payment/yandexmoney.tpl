@@ -74,7 +74,7 @@ endif; ?>
 
         <div class="buttons">
             <div class="right">
-                <a href="javascript://" id="button-confirm" name="submit-button" class="button"><?php echo $button_confirm; ?></a>
+                <a href="" id="button-confirm" name="submit-button" class="button"><?php echo $button_confirm; ?></a>
             </div>
         </div>
     </form>
